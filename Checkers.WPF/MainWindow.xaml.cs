@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -32,10 +33,27 @@ namespace Checkers.WPF
         }
     }
 
+    public class SquareColorToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var squareColor = (SquareColor) value;
+            return squareColor == SquareColor.Black ? Brushes.Black : Brushes.White;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var brush = value as Brush;
+            return brush == Brushes.Black ? SquareColor.Black : SquareColor.White;
+        }
+    }
+
     public sealed class Board
     {
         public Square[,] BoardMatrix { get; }
         public ObservableCollection<Piece> Pieces { get; }
+
+        public IEnumerable<Square> Squares => BoardMatrix.Cast<Square>();
 
         public Board()
         {
@@ -54,7 +72,7 @@ namespace Checkers.WPF
                     if (row > 2 && row < 5) continue; // ignore rows that shouldn't have initial pieces
 
                     var square = BoardMatrix[row, col];
-                    if (square.Color == SquareColor.White)
+                    if (square.Color == SquareColor.Black)
                     {
                         var pieceColor = square.Row < 3 ? PieceColor.Red : PieceColor.Black;
                         var piece = new Piece(pieceColor)
