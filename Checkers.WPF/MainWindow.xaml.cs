@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,6 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Checkers.WPF.Annotations;
 using Path = System.IO.Path;
 
 namespace Checkers.WPF
@@ -22,264 +26,134 @@ namespace Checkers.WPF
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Board board;
-        private Border[,] borders;
-        private bool gameStarted = false;
-        private List<Border> possibleMoves;
-        private Piece selectedPiece;
-
         public MainWindow()
         {
             InitializeComponent();
-
-            board = new Board();
-            borders = new Border[8,8];
-            possibleMoves = new List<Border>();
-            PopulateBoardGrid();
-        }
-
-
-        private void PopulateBoardGrid()
-        {
-            var grid = BoardGrid;
-            for (int row = 0; row < board.RowsCount; row++)
-            {
-                for (int col = 0; col < board.ColumnsCount; col++)
-                {
-                    var cellBorder = new Border
-                    {
-                        Background = Utility.CellColorToBrush(board[row, col].Color),
-                        Tag = board[row, col]
-                    };
-
-                    borders[row, col] = cellBorder;
-                    Grid.SetRow(cellBorder,row);
-                    Grid.SetColumn(cellBorder, col);
-                    grid.Children.Add(cellBorder);
-
-                    if (row < 3 && board[row, col].Color == CellColor.Black)
-                    {
-                        board[row,col].Piece = new Piece(PieceColor.Red)
-                        {
-                            ImagePath = Utility.ResourcesUri + "redpiece.png"
-                        };
-                        cellBorder.Child = new Image()
-                        {
-                            Source = new BitmapImage(new Uri((board[row, col].Piece.ImagePath))),
-                            Tag = board[row,col].Piece
-                        };
-                    }
-
-                    if (row > 4 && board[row, col].Color == CellColor.Black)
-                    {
-                        board[row, col].Piece = new Piece(PieceColor.Black)
-                        {
-                            ImagePath = Utility.ResourcesUri + "blackpiece.png"
-                        };
-                        cellBorder.Child = new Image()
-                        {
-                            Source = new BitmapImage(new Uri((board[row, col].Piece.ImagePath))),
-                            Tag = board[row, col].Piece
-                        };
-                    }
-
-                    cellBorder.MouseDown += CellBorderOnMouseDown;
-                }
-            }
-        }
-
-        private void CellBorderOnMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            var cell = (sender as Border).Tag as Cell;
-            if (selectedPiece != null)
-            {
-                if (possibleMoves.Any(b => b.Equals(sender)))
-                {
-                    MakeMove(cell);
-                    EndMove();
-                }
-            }
-            else if(cell.Piece != null)
-            {
-                selectedPiece = cell.Piece;
-                HighLightMoves(cell);
-            }
-        }
-
-        private void EndMove()
-        {
-            foreach (var border in possibleMoves)
-                border.Background = Brushes.Black;
-            selectedPiece = null;
-        }
-
-        private void MakeMove(Cell destinationCell)
-        {
-            var currentCell = board[selectedPiece.Position.row, selectedPiece.Position.col];
-            destinationCell.Piece = currentCell.Piece;
-            currentCell.Piece = null;
-            UpdateCell(currentCell);
-            UpdateCell(destinationCell);
-        }
-
-        private void UpdateCell(Cell cell)
-        {
-            var border = borders[cell.Position.row, cell.Position.col];
-            if (cell.Piece != null)
-            {
-                border.Child = new Image()
-                {
-                    Source = new BitmapImage(new Uri((cell.Piece.ImagePath))),
-                    Tag = cell.Piece
-                }; 
-            }
-            else
-            {
-                border.Child = null;
-            }
-        }
-
-        private void HighLightMoves(Cell cell)
-        {
-            var piece = cell.Piece;
-            var cellsToHighLight = new Stack<Border>();
-            var piecePos = cell.Position;
-            if (piece.Color == PieceColor.Red)
-            {
-                if (cell.Position.col == 0)
-                {
-                    cellsToHighLight.Push(borders[cell.Position.row+1, cell.Position.col + 1]);
-                }
-                else if (cell.Position.col == 7)
-                {
-                    cellsToHighLight.Push(borders[ cell.Position.row + 1, cell.Position.col - 1]);
-                }
-                else
-                {
-                    cellsToHighLight.Push(borders[ cell.Position.row + 1, cell.Position.col - 1]);
-                    cellsToHighLight.Push(borders[cell.Position.row + 1, cell.Position.col + 1]);
-                }
-            }
-            else
-            {
-                if (cell.Position.col == 0)
-                {
-                    cellsToHighLight.Push(borders[cell.Position.row - 1, cell.Position.col + 1]);
-                }
-                else if (cell.Position.col == 7)
-                {
-                    cellsToHighLight.Push(borders[cell.Position.row - 1, cell.Position.col - 1]);
-                }
-                else
-                {
-                    cellsToHighLight.Push(borders[cell.Position.row - 1, cell.Position.col - 1]);
-                    cellsToHighLight.Push(borders[cell.Position.row - 1, cell.Position.col + 1]);
-                }
-            }
-
-            possibleMoves.Clear();
-            possibleMoves.AddRange(
-                cellsToHighLight.Where(border => (border.Tag as Cell).Piece == null || (border.Tag as Cell).Piece.Color != piece.Color));
-
-            HighLightBorders();
-        }
-
-        private void HighLightBorders()
-        {
-            foreach (var border in possibleMoves)
-            {
-                border.Background = Brushes.Yellow;
-            }
         }
     }
 
     public sealed class Board
     {
-        private Cell[,] boardMatrix;
+        public Square[,] BoardMatrix { get; }
+        public ObservableCollection<Piece> Pieces { get; }
 
         public Board()
         {
-            boardMatrix = new Cell[8,8];
+            BoardMatrix = new Square[8, 8];
+            Pieces = new ObservableCollection<Piece>();
             PopulateBoard();
+            PopulatePieces();
         }
 
-        private void PopulateBoard()
+        private void PopulatePieces()
         {
-            for (int row = 0; row < boardMatrix.GetLength(0); row++)
+            for (int row = 0; row < BoardMatrix.GetLength(0); row++)
             {
-                for (int col = 0; col < boardMatrix.GetLength(1); col++)
+                for (int col = 0; col < BoardMatrix.GetLength(1); col++)
                 {
-                    boardMatrix[row, col] = new Cell((row, col), (row & 1) == (col & 1) ? CellColor.White : CellColor.Black);
+                    if (row > 2 && row < 5) continue; // ignore rows that shouldn't have initial pieces
+
+                    var square = BoardMatrix[row, col];
+                    if (square.Color == SquareColor.White)
+                    {
+                        var pieceColor = square.Row < 3 ? PieceColor.Red : PieceColor.Black;
+                        var piece = new Piece(pieceColor)
+                        {
+                            Row = row,
+                            Column = col,
+                            ImagePath = pieceColor == PieceColor.Black
+                                ? Utility.ResourcesUri + "blackpiece.png"
+                                : Utility.ResourcesUri + "redpiece.png"
+                        };
+                        Pieces.Add(piece);
+                    }
                 }
             }
         }
 
-        public Cell this[int row, int col] => boardMatrix[row, col];
+        private void PopulateBoard()
+        {
+            for (int row = 0; row < BoardMatrix.GetLength(0); row++)
+            {
+                for (int col = 0; col < BoardMatrix.GetLength(1); col++)
+                {
+                    BoardMatrix[row, col] = new Square(row, col, (row & 1) == (col & 1) ? SquareColor.White : SquareColor.Black);
+                }
+            }
+        }
 
-        public int RowsCount => boardMatrix.GetLength(0);
-        public int ColumnsCount => boardMatrix.GetLength(1);
+        public Square this[int row, int col] => BoardMatrix[row, col];
+
+        public int RowsCount => BoardMatrix.GetLength(0);
+        public int ColumnsCount => BoardMatrix.GetLength(1);
     }
 
     public static class Utility
     {
-        public static Brush CellColorToBrush(CellColor color) => color switch
+        public static Brush CellColorToBrush(SquareColor color) => color switch
         {
-            CellColor.Black => Brushes.Black,
-            CellColor.White => Brushes.White,
+            SquareColor.Black => Brushes.Black,
+            SquareColor.White => Brushes.White,
             _ => throw new ArgumentOutOfRangeException(nameof(color), color, null)
         };
 
-        public static string ResourcesUri
-        {
-            get
-            {
-                return System.IO.Path.Combine(Assembly.GetExecutingAssembly().Location, "../Resources/");
-            }
-        }
+        public static string ResourcesUri => System.IO.Path.Combine(Assembly.GetExecutingAssembly().Location, "../Resources/");
     }
 
-    public class Cell
+    public class Square
     {
-        private Piece? _piece;
-        public (int row,int col) Position { get; }
+        public int Row { get; }
+        public int Column { get; }
 
-        public Cell((int row, int col) position, CellColor color)
-        {
-            Position = position;
-            Color = color;
-        }
+        public Square(int row, int col, SquareColor color) => (Row, Column, Color) = (row, col, color);
 
-        public CellColor Color { get; }
-
-        public Piece? Piece
-        {
-            get => _piece;
-            set
-            {
-                _piece = value;
-                if (_piece != null) _piece.Position = Position;
-            }
-        }
+        public SquareColor Color { get; }
     }
 
-    public enum CellColor
+    public enum SquareColor
     {
-        Black,White
+        Black, White
     }
 
-    public class Piece
+    public class Piece : INotifyPropertyChanged
     {
+        private int _row;
+        private int _column;
         public PieceColor Color { get; private set; }
 
         public Piece(PieceColor color) => Color = color;
-        public (int row,int col) Position { get; set; }
+
+        public int Row
+        {
+            get => _row;
+            set
+            {
+                _row = value; OnPropertyChanged();
+            }
+        }
+
+        public int Column
+        {
+            get => _column;
+            set { _column = value; OnPropertyChanged(); }
+        }
+
         public string ImagePath { get; set; }
 
         public bool Kinged { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        [NotifyPropertyChangedInvocator]
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public enum PieceColor
     {
-        Red,Black
+        Red, Black
     }
+
 }
