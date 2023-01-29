@@ -93,7 +93,7 @@ namespace Checkers.WPF
             var cell = (sender as Border).Tag as Cell;
             if (selectedPiece != null)
             {
-                if (possibleMoves.Any(b => b.Equals(sender)))
+                if (possibleMoves.Any(b => b.Equals(sender)) && cell?.Piece == null)
                 {
                     MakeMove(cell);
                     EndMove();
@@ -179,7 +179,8 @@ namespace Checkers.WPF
 
             possibleMoves.Clear();
             possibleMoves.AddRange(
-                cellsToHighLight.Where(border => (border.Tag as Cell).Piece == null || (border.Tag as Cell).Piece.Color != piece.Color));
+                cellsToHighLight.Where(border => (border.Tag as Cell).Piece == null 
+                                                 || (border.Tag as Cell).Piece.Color != piece.Color));
 
             HighLightBorders();
         }
