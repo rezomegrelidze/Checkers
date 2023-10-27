@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Checkers.WPF"
         xmlns:valueConverters="clr-namespace:Checkers.WPF.ValueConverters"
         mc:Ignorable="d"
-        Title="Checkers.WPF" Height="1000" Width="1000">
+        Title="Checkers.WPF" Height="1000" Width="1000" >
     <Window.Resources>
         <local:Board x:Key="Board"/>
         <valueConverters:SquareColorToBrushConverter x:Key="SquareColorToBrushConverter"/>
@@ -41,8 +41,16 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Rectangle Fill="{Binding Color,Converter={StaticResource SquareColorToBrushConverter}}">
-
+                    <Rectangle Fill="{Binding Color,Converter={StaticResource SquareColorToBrushConverter}}" MouseDown="SquareSelectedEvent" Tag="{Binding}">
+                        <Rectangle.Style>
+                            <Style TargetType="{x:Type Rectangle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsHighLighted}" Value="True">
+                                        <Setter Property="Fill" Value="Yellow"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Rectangle.Style>
                     </Rectangle>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -82,7 +90,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Image Source="{Binding ImagePath}"></Image>
+                    <Image Source="{Binding ImagePath}" MouseDown="PieceClicked_Event" Tag="{Binding}"></Image>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
             <ItemsControl.ItemContainerStyle>

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 
 namespace Checkers.WPF
 {
@@ -9,7 +10,15 @@ namespace Checkers.WPF
         public Square[,] BoardMatrix { get; }
         public ObservableCollection<Piece> Pieces { get; }
 
+        public PieceColor CurrentPlayer { get; set; }
+
+        public void SwitchCurrentPlayer() => CurrentPlayer = Opponent;
+
         public IEnumerable<Square> Squares => BoardMatrix.Cast<Square>();
+
+        public bool IsCapturingMultiple = false;
+
+        public Piece SelectedPiece = null;
 
         public Board()
         {
@@ -17,6 +26,7 @@ namespace Checkers.WPF
             Pieces = new ObservableCollection<Piece>();
             PopulateBoard();
             PopulatePieces();
+            CurrentPlayer = PieceColor.Black;
         }
 
         private void PopulatePieces()
@@ -60,5 +70,34 @@ namespace Checkers.WPF
 
         public int RowsCount => BoardMatrix.GetLength(0);
         public int ColumnsCount => BoardMatrix.GetLength(1);
+
+        public bool IsOccupiedWithOpponent(Vector dest)
+        {
+            return Pieces.Any(p => p.Color == Opponent && p.PositionVector == dest);
+        }
+
+        public bool IsInBoard(Vector dest) => dest is { X : >= 0 and < 8 ,Y : >= 0 and < 8};
+
+        public PieceColor Opponent => CurrentPlayer == PieceColor.Black ? PieceColor.Red : PieceColor.Black;
+        
+        public bool IsOccupiedWithFriendly(Vector dest)
+        {
+            return Pieces.Any(p => p.Color == CurrentPlayer && p.PositionVector == dest);
+        }
+
+        public bool IsEmpty(Vector dest)
+        {
+            return Pieces.All(p => p.PositionVector != dest);
+        }
+
+        public Piece GetPiece(Vector dest)
+        {
+            return Pieces.SingleOrDefault(p => p.PositionVector == dest);
+        }
+
+        public void RemovePiece(Piece piece)
+        {
+            Pieces.Remove(piece);
+        }
     }
 }
