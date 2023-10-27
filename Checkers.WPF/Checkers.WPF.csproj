@@ -57,6 +57,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Board.cs" />
+    <Compile Include="Piece.cs" />
+    <Compile Include="PieceColor.cs" />
+    <Compile Include="Square.cs" />
+    <Compile Include="SquareColor.cs" />
+    <Compile Include="Utility.cs" />
+    <Compile Include="ValueConverters\SquareColorToBrushConverter.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

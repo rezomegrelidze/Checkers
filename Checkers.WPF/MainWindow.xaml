@@ -4,11 +4,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Checkers.WPF"
+        xmlns:valueConverters="clr-namespace:Checkers.WPF.ValueConverters"
         mc:Ignorable="d"
         Title="Checkers.WPF" Height="1000" Width="1000">
     <Window.Resources>
         <local:Board x:Key="Board"/>
-        <local:SquareColorToBrushConverter x:Key="SquareColorToBrushConverter"/>
+        <valueConverters:SquareColorToBrushConverter x:Key="SquareColorToBrushConverter"/>
     </Window.Resources>
     <Grid DataContext="{StaticResource Board}">
         <ItemsControl Name="Checkerboard" ItemsSource="{Binding Squares}" >
