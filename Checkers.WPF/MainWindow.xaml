@@ -6,12 +6,13 @@
         xmlns:local="clr-namespace:Checkers.WPF"
         xmlns:valueConverters="clr-namespace:Checkers.WPF.ValueConverters"
         mc:Ignorable="d"
-        Title="Checkers.WPF" Height="1000" Width="1000" >
+        Title="Checkers.WPF" Height="600" Width="600" >
     <Window.Resources>
-        <local:Board x:Key="Board"/>
+        <local:Board x:Key="Board" />
         <valueConverters:SquareColorToBrushConverter x:Key="SquareColorToBrushConverter"/>
+        <valueConverters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
-    <Grid DataContext="{StaticResource Board}">
+    <Grid DataContext="{StaticResource Board}" >
         <ItemsControl Name="Checkerboard" ItemsSource="{Binding Squares}" >
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -41,17 +42,13 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Rectangle Fill="{Binding Color,Converter={StaticResource SquareColorToBrushConverter}}" MouseDown="SquareSelectedEvent" Tag="{Binding}">
-                        <Rectangle.Style>
-                            <Style TargetType="{x:Type Rectangle}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsHighLighted}" Value="True">
-                                        <Setter Property="Fill" Value="Yellow"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Rectangle.Style>
-                    </Rectangle>
+                    <Grid  MouseDown="SquareSelectedEvent" Tag="{Binding}">
+                        <Rectangle Fill="{Binding Color,Converter={StaticResource SquareColorToBrushConverter}}" >
+                        </Rectangle>
+                                <Rectangle Fill="Yellow" Visibility="{Binding IsHighLighted,Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   />
+
+                    </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
             <ItemsControl.ItemContainerStyle>

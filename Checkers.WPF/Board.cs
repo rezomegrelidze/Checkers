@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 
 namespace Checkers.WPF
 {
-    public sealed class Board
+    public class Board
     {
         public Square[,] BoardMatrix { get; }
         public ObservableCollection<Piece> Pieces { get; }
@@ -14,9 +15,13 @@ namespace Checkers.WPF
 
         public void SwitchCurrentPlayer() => CurrentPlayer = Opponent;
 
-        public IEnumerable<Square> Squares => BoardMatrix.Cast<Square>();
+        public ObservableCollection<Square> Squares { get; set; }
 
-        public bool IsCapturingMultiple = false;
+        private void InitializeBoardMatrix(IEnumerable<Square> value)
+        {
+
+        }
+
 
         public Piece SelectedPiece = null;
 
@@ -27,6 +32,7 @@ namespace Checkers.WPF
             PopulateBoard();
             PopulatePieces();
             CurrentPlayer = PieceColor.Black;
+            Squares = new(BoardMatrix.Cast<Square>());
         }
 
         private void PopulatePieces()

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -20,7 +21,12 @@ namespace Checkers.WPF
 
         public Vector Forward => Color == PieceColor.Black ? new Vector(0,-1) : new Vector(0,1);
 
-        
+        public Vector Backward => Color == PieceColor.Black ? new Vector(0, 1) : new Vector(0, -1);
+
+
+
+        public bool IsQueened { get; set; }
+
 
         public int Row
         {
@@ -60,8 +66,22 @@ namespace Checkers.WPF
         {
             var options =
                 new[] {PositionVector + Forward + Left, PositionVector + Forward + Right};
+
+            if (IsQueened)
+            {
+                options = options.Concat(
+                [
+                    PositionVector + Backward + Left, PositionVector + Backward + Right
+                ]).ToArray();
+            }
             var possibleMovesLeft = GeneratePossibleMoves(board, options[0],isLeft: true).ToList();
             var possibleMovesRight = GeneratePossibleMoves(board, options[1],isLeft: false).ToList();
+            if (IsQueened)
+            {
+                var possibleMovesLeftBack = GeneratePossibleMoves(board, options[2],isLeft: true).ToList();
+                var possibleMovesRightBack = GeneratePossibleMoves(board, options[3],isLeft: false).ToList();
+                return [..possibleMovesLeft,..possibleMovesRight,..possibleMovesLeftBack,..possibleMovesRightBack];
+            }
             return possibleMovesLeft.Concat(possibleMovesRight);
         }
 
@@ -78,7 +98,8 @@ namespace Checkers.WPF
 
 
                 List<CaptureMove> captureMoves = new();
-                GetPossibleCaptureMoves(dest, board, captureMoves,isLeft);
+                var visited = new HashSet<Vector>();
+                GetPossibleCaptureMoves(PositionVector,dest, board, captureMoves,isLeft,false, visited);
 
                 foreach (var move in captureMoves)
                     yield return move;
@@ -86,20 +107,42 @@ namespace Checkers.WPF
         }
 
 
-        private void GetPossibleCaptureMoves(Vector dest, Board board,List<CaptureMove> captureMoves,bool isLeft)
+        private void GetPossibleCaptureMoves(Vector src,Vector dest, Board board,List<CaptureMove> captureMoves,bool isLeft,bool isBack, HashSet<Vector> visited)
         {
-            var hopOverPosition = dest + Forward + (isLeft ? Left : Right);
-            if (board.IsInBoard(hopOverPosition) && board.IsEmpty(hopOverPosition))
-            {
-                captureMoves.Add(new CaptureMove(this,board.GetPiece(dest),PositionVector,hopOverPosition));
+            if (visited.Contains(src)) return;
 
-                GetPossibleCaptureMoves(hopOverPosition,board,captureMoves,true);
-                
-                GetPossibleCaptureMoves(hopOverPosition,board,captureMoves,false);
-            }
-            else
+            
+            var hopOverPositionForward = dest + Forward + (isLeft ? Left : Right);
+            var hopOverPositionBackward = dest + Backward + (isLeft ? Left : Right);
+
+
+
+            visited.Add(src);
+
+            
+
+
+            if ((isBack || visited.Count == 1) && IsQueened && (board.IsInBoard(hopOverPositionBackward)) && board.IsEmpty(hopOverPositionBackward))
             {
-                return;
+                captureMoves.Add(new CaptureMove(this, board.GetPiece(dest), PositionVector, hopOverPositionBackward));
+
+                
+                if (isLeft && board.IsOccupiedWithOpponent(hopOverPositionBackward + Backward + Left))
+                    GetPossibleCaptureMoves(dest, hopOverPositionBackward + Backward + Left, board, captureMoves, isLeft: true,isBack:true, visited);
+                if (!isLeft && board.IsOccupiedWithOpponent(hopOverPositionBackward + Backward + Right))
+                    GetPossibleCaptureMoves(dest, hopOverPositionBackward + Backward + Right, board, captureMoves, isLeft: false, isBack: true, visited);
+            }
+
+
+            if ((!isBack || visited.Count == 1) && board.IsInBoard(hopOverPositionForward) && board.IsEmpty(hopOverPositionForward))
+            {
+                captureMoves.Add(new CaptureMove(this,board.GetPiece(dest),PositionVector,hopOverPositionForward));
+
+
+                    if (isLeft && board.IsOccupiedWithOpponent(hopOverPositionForward + Forward + Left))
+                        GetPossibleCaptureMoves(dest, hopOverPositionForward + Forward + Left, board, captureMoves, isLeft: true, isBack: false, visited);
+                    if (!isLeft && board.IsOccupiedWithOpponent(hopOverPositionForward + Forward + Right))
+                        GetPossibleCaptureMoves(dest, hopOverPositionForward + Forward + Right, board, captureMoves, isLeft: false, isBack: false, visited);
             }
         }
 
@@ -107,6 +150,18 @@ namespace Checkers.WPF
         {
             Row = to.row;
             Column = to.col;
+
+
+            if(IsQueenPosition(PositionVector))
+            {
+                IsQueened = true;
+            }
+        }
+
+        private bool IsQueenPosition(Vector positionVector)
+        {
+            if (Color == PieceColor.Black) return positionVector.Y == 0;
+            else return positionVector.Y == 7;
         }
     }
 

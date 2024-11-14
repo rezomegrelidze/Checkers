@@ -30,20 +30,20 @@ namespace Checkers.WPF
 
         private void PieceClicked_Event(object sender, MouseButtonEventArgs e)
         {
-            if (board.SelectedPiece == null)
+            var piece = (sender as Image).Tag as Piece;
+            if(piece != board.SelectedPiece)
             {
-
-                var piece = (sender as Image).Tag as Piece;
-                if (piece.Color == board.Opponent) return;
-                var moves = piece.PossibleMoves(board).ToList();
-                HighLightMoves(moves);
-                board.SelectedPiece = piece;
+                UnhighLightMoves();
             }
+            if (piece.Color == board.Opponent) return;
+            var moves = piece.PossibleMoves(board).ToList();
+            HighLightMoves(moves);
+            board.SelectedPiece = piece;
         }
 
         private void HighLightMoves(IEnumerable<IMove> moves)
         {
-            foreach ((int row,int col) in moves.Where(m => m is NormalMove).Select(m => m.To))
+            foreach ((int row,int col) in moves.Select(m => m.To))
             {
                 board[row, col].IsHighLighted = true;
             }
@@ -51,8 +51,8 @@ namespace Checkers.WPF
 
         private void SquareSelectedEvent(object sender, MouseButtonEventArgs e)
         {
-            var selectedSquare = (sender as Rectangle).Tag as Square;
-            if (board.IsCapturingMultiple || board.SelectedPiece != null)
+            var selectedSquare = (sender as Grid).Tag as Square;
+            if (board.SelectedPiece != null)
             {
                 var possibleMoves = board.SelectedPiece.PossibleMoves(board).ToList();
                 var selectedMove =
@@ -62,26 +62,23 @@ namespace Checkers.WPF
                     .SingleOrDefault(m => m.To == (selectedSquare.Row, selectedSquare.Column));
                 if (selectedMove != null)
                 {
-                    HideHighlightMoves(possibleMoves);
                     board.SelectedPiece.MoveTo(selectedMove.To);
                     board.SelectedPiece = null;
                     board.SwitchCurrentPlayer();
                 }
                 else if (captureMove != null)
                 {
-                        board.RemovePiece(captureMove.CapturedPiece);
-                        board.SelectedPiece.MoveTo(captureMove.To);
-                        if (captureMoves.Count == 1)
-                        {
-                            board.SelectedPiece = null;
-                            board.SwitchCurrentPlayer();
-                            board.IsCapturingMultiple = false;
-                        }
-                        else
-                        {
-                            board.IsCapturingMultiple = true;
-                        }
+                    foreach (var captMove in captureMoves)
+                    {
+                        board.RemovePiece(captMove.CapturedPiece);
+                    }
+
+                    board.SelectedPiece.MoveTo(captureMove.To);
+                    board.SelectedPiece = null;
+                    board.SwitchCurrentPlayer();
+
                 }
+                UnhighLightMoves();
             }
         }
 
@@ -90,6 +87,14 @@ namespace Checkers.WPF
             foreach ((int row,int col) in moves.Select(m => m.To))
             {
                 board[row, col].IsHighLighted = false;
+            }
+        }
+
+        private void UnhighLightMoves()
+        {
+            foreach(var square in board.Squares.Cast<Square>())
+            {
+                square.IsHighLighted = false;
             }
         }
     }

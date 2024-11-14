@@ -63,6 +63,7 @@
     <Compile Include="Square.cs" />
     <Compile Include="SquareColor.cs" />
     <Compile Include="Utility.cs" />
+    <Compile Include="ValueConverters\BooleanToVisibilityConverter.cs" />
     <Compile Include="ValueConverters\SquareColorToBrushConverter.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
