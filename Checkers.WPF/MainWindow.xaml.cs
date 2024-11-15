@@ -43,10 +43,24 @@ namespace Checkers.WPF
 
         private void HighLightMoves(IEnumerable<IMove> moves)
         {
-            foreach ((int row,int col) in moves.Select(m => m.To))
+            foreach(var move in moves)
             {
-                board[row, col].IsHighLighted = true;
+                if(move is NormalMove) 
+                {
+                    board[move.To.row, move.To.col].IsHighLighted = true;
+                }
+                else if(move is CaptureMove capt)
+                {
+                    var temp = capt;
+                    while(temp.Next != null)
+                    {
+                        
+                        temp = temp.Next;
+                    }
+                    board[temp.To.row, temp.To.col].IsHighLighted = true;
+                }
             }
+            
         }
 
         private void SquareSelectedEvent(object sender, MouseButtonEventArgs e)
@@ -54,12 +68,13 @@ namespace Checkers.WPF
             var selectedSquare = (sender as Grid).Tag as Square;
             if (board.SelectedPiece != null)
             {
-                var possibleMoves = board.SelectedPiece.PossibleMoves(board).ToList();
+                var possibleMoves = board.SelectedPiece.PossibleMovesNew(board).ToList();
                 var selectedMove =
-                    possibleMoves.Where(m => m is NormalMove).SingleOrDefault(m => m.To == (selectedSquare.Row, selectedSquare.Column));
+                    possibleMoves.Where(m => m is NormalMove).FirstOrDefault(m => m.To == (selectedSquare.Row, selectedSquare.Column));
                 var captureMoves = possibleMoves.Where(m => m is CaptureMove).Cast<CaptureMove>().ToList();
                 var captureMove =captureMoves
-                    .SingleOrDefault(m => m.To == (selectedSquare.Row, selectedSquare.Column));
+                    .FirstOrDefault(m => m.Next == null ?  m.To == (selectedSquare.Row, selectedSquare.Column)
+                    : m.GetFinalDestinationPos() == (selectedSquare.Row,selectedSquare.Column));
                 if (selectedMove != null)
                 {
                     board.SelectedPiece.MoveTo(selectedMove.To);
@@ -70,10 +85,15 @@ namespace Checkers.WPF
                 {
                     foreach (var captMove in captureMoves)
                     {
-                        board.RemovePiece(captMove.CapturedPiece);
+                        var temp = captMove;
+                        while(temp != null)
+                        {
+                            board.RemovePiece(temp.CapturedPiece);
+                            temp = temp.Next;
+                        } 
                     }
 
-                    board.SelectedPiece.MoveTo(captureMove.To);
+                    board.SelectedPiece.MoveTo(captureMove.GetFinalDestinationPos());
                     board.SelectedPiece = null;
                     board.SwitchCurrentPlayer();
 

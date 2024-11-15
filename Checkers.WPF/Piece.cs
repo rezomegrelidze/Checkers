@@ -64,29 +64,6 @@ namespace Checkers.WPF
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public IEnumerable<IMove> PossibleMoves(Board board)
-        {
-            var options =
-                new[] {PositionVector + Forward + Left, PositionVector + Forward + Right};
-
-            if (IsQueened)
-            {
-                options = options.Concat(
-                [
-                    PositionVector + Backward + Left, PositionVector + Backward + Right
-                ]).ToArray();
-            }
-            var possibleMovesLeft = GeneratePossibleMoves(board, options[0],isLeft: true).ToList();
-            var possibleMovesRight = GeneratePossibleMoves(board, options[1],isLeft: false).ToList();
-            if (IsQueened)
-            {
-                var possibleMovesLeftBack = GeneratePossibleMoves(board, options[2],isLeft: true).ToList();
-                var possibleMovesRightBack = GeneratePossibleMoves(board, options[3],isLeft: false).ToList();
-                return [..possibleMovesLeft,..possibleMovesRight,..possibleMovesLeftBack,..possibleMovesRightBack];
-            }
-            return possibleMovesLeft.Concat(possibleMovesRight);
-        }
-
         IEnumerable<Vector> GetLegalDirections()
         {
             yield return Forward + Left;
@@ -100,35 +77,23 @@ namespace Checkers.WPF
 
         public IEnumerable<IMove> PossibleMovesNew(Board board)
         {
-            
-            var options = GetLegalDirections().Select(dir => PositionVector + dir).ToArray();
+            var options = GetLegalDirections().Select(dir => PositionVector + dir)
+                .Where(pos => board.IsInBoard(pos)).ToArray();
 
             var result = new List<IEnumerable<IMove>>();
             foreach(var option in options)
             {
-                var possibleMoves = GeneratePossibleMovesNew(option,board);
+                var possibleMoves = GeneratePossibleMovesNew(option,board).ToList();
                 result.Add(possibleMoves);
             }
 
             return result.SelectMany(l => l);
-
-            //var possibleMovesLeft = GeneratePossibleMoves(board, options[0], isLeft: true).ToList();
-            //var possibleMovesRight = GeneratePossibleMoves(board, options[1], isLeft: false).ToList();
-            //if (IsQueened)
-            //{
-            //    var possibleMovesLeftBack = GeneratePossibleMoves(board, options[2], isLeft: true).ToList();
-            //    var possibleMovesRightBack = GeneratePossibleMoves(board, options[3], isLeft: false).ToList();
-            //    return [.. possibleMovesLeft, .. possibleMovesRight, .. possibleMovesLeftBack, .. possibleMovesRightBack];
-            //}
-            //return possibleMovesLeft.Concat(possibleMovesRight);
         }
 
         private IEnumerable<IMove> GeneratePossibleMovesNew(Vector dest, Board board)
         {
             if (!board.IsInBoard(dest)) yield break;
             if (board.IsOccupiedWithFriendly(dest)) yield break;
-
-
 
             if (!board.IsOccupiedWithOpponent(dest))
                 yield return new NormalMove(this, PositionVector, dest);
@@ -143,82 +108,42 @@ namespace Checkers.WPF
             }
         }
 
-        private void GetPossibleCaptureMovesNew(Vector dest, Board board, List<CaptureMove> captureMoves, HashSet<Vector> visited)
+        private void GetPossibleCaptureMovesNew(Vector dest, Board board, List<CaptureMove> captureMoves, HashSet<Vector> visited,CaptureMove prevCaptureMove = null)
         {
+            if (!board.IsInBoard(dest)) return;
             if (visited.Contains(dest)) return;
             visited.Add(dest);
             var legalDirs = GetLegalDirections();
 
-            var allAdjacents = legalDirs.Select(dir => (dest + dir,dir));
+            var allAdjacents = legalDirs.Select(dir => (dest + dir,dir))
+                .Where((tup,_) => board.IsInBoard(tup.Item1));
 
             foreach(var (adj,dir) in allAdjacents)
             {
                 if(board.IsOccupiedWithOpponent(adj) && board.IsEmpty(adj + dir))
                 {
-                    captureMoves.Add(new(this, board.GetPiece(adj), dest, adj + dir));
-                    GetPossibleCaptureMovesNew(adj+dir, board, captureMoves, visited);
+
+                    var lastCapturedMove = captureMoves.LastOrDefault();
+                    if(lastCapturedMove != null)
+                    {
+                        var allCapturedPieces = lastCapturedMove.GetAllCapturedPieces();
+                        if (allCapturedPieces.Contains(board.GetPiece(adj)))
+                            continue;
+                    }
+                    CaptureMove captureMove = new(this, board.GetPiece(adj), dest, adj + dir);
+
+                    if (prevCaptureMove == null)
+                    {
+                        captureMoves.Add(captureMove);
+                    }
+                    else
+                    {
+
+
+                        prevCaptureMove.Next = captureMove;
+                    }
+                    GetPossibleCaptureMovesNew(adj+dir, board, captureMoves, visited,captureMove);
                 }
-            }
-        }
-
-        private IEnumerable<IMove> GeneratePossibleMoves(Board board, Vector dest,bool isLeft)
-        {
-            if(!board.IsInBoard(dest)) yield break;
-
-            if (board.IsOccupiedWithFriendly(dest)) yield break;
-
-            if (!board.IsOccupiedWithOpponent(dest))
-                yield return new NormalMove(this, PositionVector, dest);
-            else
-            {
-
-
-                List<CaptureMove> captureMoves = new();
-                var visited = new HashSet<Vector>();
-                GetPossibleCaptureMoves(PositionVector,dest, board, captureMoves,isLeft,false, visited);
-
-                foreach (var move in captureMoves)
-                    yield return move;
-            }
-        }
-
-
-        private void GetPossibleCaptureMoves(Vector src,Vector dest, Board board,List<CaptureMove> captureMoves,bool isLeft,bool isBack, HashSet<Vector> visited)
-        {
-            if (visited.Contains(src)) return;
-
-            
-            var hopOverPositionForward = dest + Forward + (isLeft ? Left : Right);
-            var hopOverPositionBackward = dest + Backward + (isLeft ? Left : Right);
-
-
-
-            visited.Add(src);
-
-            
-
-
-            if ((isBack || visited.Count == 1) && IsQueened && (board.IsInBoard(hopOverPositionBackward)) && board.IsEmpty(hopOverPositionBackward))
-            {
-                captureMoves.Add(new CaptureMove(this, board.GetPiece(dest), PositionVector, hopOverPositionBackward));
-
-                
-                if (isLeft && board.IsOccupiedWithOpponent(hopOverPositionBackward + Backward + Left))
-                    GetPossibleCaptureMoves(dest, hopOverPositionBackward + Backward + Left, board, captureMoves, isLeft: true,isBack:true, visited);
-                if (!isLeft && board.IsOccupiedWithOpponent(hopOverPositionBackward + Backward + Right))
-                    GetPossibleCaptureMoves(dest, hopOverPositionBackward + Backward + Right, board, captureMoves, isLeft: false, isBack: true, visited);
-            }
-
-
-            if ((!isBack || visited.Count == 1) && board.IsInBoard(hopOverPositionForward) && board.IsEmpty(hopOverPositionForward))
-            {
-                captureMoves.Add(new CaptureMove(this,board.GetPiece(dest),PositionVector,hopOverPositionForward));
-
-
-                    if (isLeft && board.IsOccupiedWithOpponent(hopOverPositionForward + Forward + Left))
-                        GetPossibleCaptureMoves(dest, hopOverPositionForward + Forward + Left, board, captureMoves, isLeft: true, isBack: false, visited);
-                    if (!isLeft && board.IsOccupiedWithOpponent(hopOverPositionForward + Forward + Right))
-                        GetPossibleCaptureMoves(dest, hopOverPositionForward + Forward + Right, board, captureMoves, isLeft: false, isBack: false, visited);
             }
         }
 
@@ -278,6 +203,28 @@ namespace Checkers.WPF
 
         public (int row, int col) From { get; set; }
         public (int row, int col) To { get; set; }
+
+        public CaptureMove Next { get; set; }
+
+        public (int row,int col) GetFinalDestinationPos()
+        {
+            if (Next == null) return To;
+            else return Next.GetFinalDestinationPos();
+        }
+
+        public IEnumerable<Piece> GetAllCapturedPieces()
+        {
+            if(Next == null)
+            {
+                yield return CapturedPiece;
+                yield break;
+            }
+            else
+            {
+                foreach(var capturedPiece in Next.GetAllCapturedPieces()) 
+                    yield return capturedPiece;
+            }
+        }
     }
 
     public static class VectorExtensions

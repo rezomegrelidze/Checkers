@@ -72,7 +72,8 @@ namespace Checkers.WPF
             }
         }
 
-        public Square this[int row, int col] => BoardMatrix[row, col];
+        public Square this[int row, int col] => 
+            BoardMatrix[row, col];
 
         public int RowsCount => BoardMatrix.GetLength(0);
         public int ColumnsCount => BoardMatrix.GetLength(1);
@@ -93,7 +94,7 @@ namespace Checkers.WPF
 
         public bool IsEmpty(Vector dest)
         {
-            return Pieces.All(p => p.PositionVector != dest);
+            return IsInBoard(dest) && Pieces.All(p => p.PositionVector != dest);
         }
 
         public Piece GetPiece(Vector dest)
