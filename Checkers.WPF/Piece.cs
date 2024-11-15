@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Windows;
+using System.Windows.Documents;
 using Checkers.WPF.Annotations;
 
 using static Checkers.WPF.VectorExtensions;
@@ -83,6 +85,80 @@ namespace Checkers.WPF
                 return [..possibleMovesLeft,..possibleMovesRight,..possibleMovesLeftBack,..possibleMovesRightBack];
             }
             return possibleMovesLeft.Concat(possibleMovesRight);
+        }
+
+        IEnumerable<Vector> GetLegalDirections()
+        {
+            yield return Forward + Left;
+            yield return Forward + Right;
+            if (IsQueened)
+            {
+                yield return Backward + Left;
+                yield return Backward + Right;
+            }
+        }
+
+        public IEnumerable<IMove> PossibleMovesNew(Board board)
+        {
+            
+            var options = GetLegalDirections().Select(dir => PositionVector + dir).ToArray();
+
+            var result = new List<IEnumerable<IMove>>();
+            foreach(var option in options)
+            {
+                var possibleMoves = GeneratePossibleMovesNew(option,board);
+                result.Add(possibleMoves);
+            }
+
+            return result.SelectMany(l => l);
+
+            //var possibleMovesLeft = GeneratePossibleMoves(board, options[0], isLeft: true).ToList();
+            //var possibleMovesRight = GeneratePossibleMoves(board, options[1], isLeft: false).ToList();
+            //if (IsQueened)
+            //{
+            //    var possibleMovesLeftBack = GeneratePossibleMoves(board, options[2], isLeft: true).ToList();
+            //    var possibleMovesRightBack = GeneratePossibleMoves(board, options[3], isLeft: false).ToList();
+            //    return [.. possibleMovesLeft, .. possibleMovesRight, .. possibleMovesLeftBack, .. possibleMovesRightBack];
+            //}
+            //return possibleMovesLeft.Concat(possibleMovesRight);
+        }
+
+        private IEnumerable<IMove> GeneratePossibleMovesNew(Vector dest, Board board)
+        {
+            if (!board.IsInBoard(dest)) yield break;
+            if (board.IsOccupiedWithFriendly(dest)) yield break;
+
+
+
+            if (!board.IsOccupiedWithOpponent(dest))
+                yield return new NormalMove(this, PositionVector, dest);
+            else
+            {
+                List<CaptureMove> captureMoves = new();
+                var visited = new HashSet<Vector>();
+                GetPossibleCaptureMovesNew(PositionVector, board, captureMoves, visited);
+
+                foreach (var move in captureMoves)
+                    yield return move;
+            }
+        }
+
+        private void GetPossibleCaptureMovesNew(Vector dest, Board board, List<CaptureMove> captureMoves, HashSet<Vector> visited)
+        {
+            if (visited.Contains(dest)) return;
+            visited.Add(dest);
+            var legalDirs = GetLegalDirections();
+
+            var allAdjacents = legalDirs.Select(dir => (dest + dir,dir));
+
+            foreach(var (adj,dir) in allAdjacents)
+            {
+                if(board.IsOccupiedWithOpponent(adj) && board.IsEmpty(adj + dir))
+                {
+                    captureMoves.Add(new(this, board.GetPiece(adj), dest, adj + dir));
+                    GetPossibleCaptureMovesNew(adj+dir, board, captureMoves, visited);
+                }
+            }
         }
 
         private IEnumerable<IMove> GeneratePossibleMoves(Board board, Vector dest,bool isLeft)

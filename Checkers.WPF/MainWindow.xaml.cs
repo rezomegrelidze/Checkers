@@ -36,7 +36,7 @@ namespace Checkers.WPF
                 UnhighLightMoves();
             }
             if (piece.Color == board.Opponent) return;
-            var moves = piece.PossibleMoves(board).ToList();
+            var moves = piece.PossibleMovesNew(board).ToList();
             HighLightMoves(moves);
             board.SelectedPiece = piece;
         }
